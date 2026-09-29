@@ -18,7 +18,7 @@ export async function handle(c: Context<{ Bindings: Env }>): Promise<Response> {
 
     let ctx: ExecutionContext | undefined;
     try {
-      ctx = c.executionCtx;
+      ctx = c.executionCtx as ExecutionContext;
     } catch {
       // No ExecutionContext in this environment (e.g. tests); WebSub notifications will be skipped
     }
