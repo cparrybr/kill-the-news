@@ -29,7 +29,10 @@ import { FORWARD_EMAIL_IPS_CACHE_TTL_MS } from "./config/constants";
 
 type AppEnv = { Bindings: Env };
 
-const ALLOWED_ORIGINS = ["https://kill-the.news", "https://www.kill-the.news"];
+const ALLOWED_ORIGINS = [
+  "https://globalreadout.com",
+  "https://www.globalreadout.com",
+];
 
 // Fallback ForwardEmail.net IP addresses in case API fetch fails
 const FALLBACK_FORWARD_EMAIL_IPS = [

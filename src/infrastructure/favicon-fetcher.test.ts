@@ -59,31 +59,11 @@ describe("cacheFaviconForDomain", () => {
     expect(new Uint8Array(icon!.bytes)).toEqual(PNG);
   });
 
-  it("falls back to DuckDuckGo when the direct icon 404s", async () => {
-    const env = createMockEnv() as unknown as Env;
-    server.use(
-      http.get("https://acme.test/favicon.ico", () =>
-        HttpResponse.text("nope", { status: 404 }),
-      ),
-      http.get("https://icons.duckduckgo.com/ip3/acme.test.ico", () =>
-        imageResponse(PNG, "image/x-icon"),
-      ),
-    );
-
-    await cacheFaviconForDomain("acme.test", env);
-
-    const icon = await getCachedIcon("acme.test", env);
-    expect(icon?.contentType).toBe("image/x-icon");
-  });
-
   it("falls back to the apex domain when the subdomain has no icon", async () => {
     const env = createMockEnv() as unknown as Env;
     server.use(
       http.get("https://mail.acme.test/favicon.ico", () =>
         HttpResponse.error(),
-      ),
-      http.get("https://icons.duckduckgo.com/ip3/mail.acme.test.ico", () =>
-        HttpResponse.text("", { status: 404 }),
       ),
       http.get("https://acme.test/favicon.ico", () =>
         imageResponse(PNG, "image/vnd.microsoft.icon"),
@@ -104,9 +84,6 @@ describe("cacheFaviconForDomain", () => {
       http.get("https://nope.test/favicon.ico", () =>
         HttpResponse.text("", { status: 404 }),
       ),
-      http.get("https://icons.duckduckgo.com/ip3/nope.test.ico", () =>
-        HttpResponse.text("", { status: 404 }),
-      ),
     );
 
     await cacheFaviconForDomain("nope.test", env);
@@ -121,9 +98,6 @@ describe("cacheFaviconForDomain", () => {
     const put = vi.spyOn(IconRepository.prototype, "put");
     server.use(
       http.get("https://transient.test/favicon.ico", () =>
-        HttpResponse.text("", { status: 404 }),
-      ),
-      http.get("https://icons.duckduckgo.com/ip3/transient.test.ico", () =>
         HttpResponse.text("", { status: 404 }),
       ),
     );
@@ -160,9 +134,6 @@ describe("cacheFaviconForDomain", () => {
     const big = new Uint8Array(MAX_ICON_BYTES + 1);
     server.use(
       http.get("https://big.test/favicon.ico", () => imageResponse(big)),
-      http.get("https://icons.duckduckgo.com/ip3/big.test.ico", () =>
-        HttpResponse.text("", { status: 404 }),
-      ),
     );
 
     await cacheFaviconForDomain("big.test", env);
@@ -176,9 +147,6 @@ describe("cacheFaviconForDomain", () => {
         HttpResponse.text("<html>", {
           headers: { "Content-Type": "text/html" },
         }),
-      ),
-      http.get("https://icons.duckduckgo.com/ip3/html.test.ico", () =>
-        HttpResponse.text("", { status: 404 }),
       ),
     );
 
@@ -203,9 +171,6 @@ describe("cacheFaviconForDomain", () => {
     const env = createMockEnv() as unknown as Env;
     server.use(
       http.get("https://err.test/favicon.ico", () => HttpResponse.error()),
-      http.get("https://icons.duckduckgo.com/ip3/err.test.ico", () =>
-        HttpResponse.error(),
-      ),
     );
 
     await expect(

@@ -22,11 +22,13 @@ function req(path: string, init: RequestInit = {}): Request {
 describe("CORS middleware", () => {
   it("adds CORS headers for an allowed origin", async () => {
     const res = await worker.fetch(
-      req("/rss/some-feed", { headers: { Origin: "https://kill-the.news" } }),
+      req("/rss/some-feed", {
+        headers: { Origin: "https://globalreadout.com" },
+      }),
       env as unknown as Env,
     );
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe(
-      "https://kill-the.news",
+      "https://globalreadout.com",
     );
   });
 
@@ -43,7 +45,7 @@ describe("CORS middleware", () => {
       req("/rss/some-feed", {
         method: "OPTIONS",
         headers: {
-          Origin: "https://kill-the.news",
+          Origin: "https://globalreadout.com",
           "Access-Control-Request-Method": "GET",
         },
       }),
@@ -51,7 +53,7 @@ describe("CORS middleware", () => {
     );
     expect(res.status).toBe(204);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe(
-      "https://kill-the.news",
+      "https://globalreadout.com",
     );
   });
 

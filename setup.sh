@@ -58,8 +58,9 @@ const findByTitle = (title) => {
   return match?.id ?? "";
 };
 
-const mainId = findByTitle(`${workerName}-EMAIL_STORAGE`);
-const previewId = findByTitle(`${workerName}-EMAIL_STORAGE_preview`);
+// Older wrangler prefixed titles with the worker name; newer wrangler uses the binding name alone.
+const mainId = findByTitle(`${workerName}-EMAIL_STORAGE`) || findByTitle("EMAIL_STORAGE");
+const previewId = findByTitle(`${workerName}-EMAIL_STORAGE_preview`) || findByTitle("EMAIL_STORAGE_preview");
 process.stdout.write(`${mainId}\n${previewId}`);
 NODE
 }
@@ -68,7 +69,7 @@ get_kv_namespace_ids() {
   echo "🔍 Retrieving KV namespace IDs..."
 
   local output
-  if ! output="$(npx wrangler kv namespace list --json 2>/dev/null)"; then
+  if ! output="$(npx wrangler kv namespace list 2>/dev/null)"; then
     echo "❌ Error listing KV namespaces. Please check your Cloudflare authentication."
     return 1
   fi

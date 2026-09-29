@@ -72,10 +72,7 @@ async function resolveIcon(
     ?.parents()
     .map((d) => d.value) ?? [domain];
   for (const host of hosts) {
-    const candidates = [
-      `https://${host}/favicon.ico`,
-      `https://icons.duckduckgo.com/ip3/${host}.ico`,
-    ];
+    const candidates = [`https://${host}/favicon.ico`];
     for (const url of candidates) {
       try {
         const icon = await fetchIconFrom(url);
