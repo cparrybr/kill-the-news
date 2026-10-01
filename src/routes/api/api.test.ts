@@ -338,6 +338,61 @@ describe("REST API (/api/v1)", () => {
       expect(after.status).toBe(404);
     });
 
+    it("lists and reads an email missing from the metadata index", async () => {
+      const feedId = await createFeed();
+
+      // Two emails stored, but a concurrent ingest dropped the second from
+      // the index (the KV read-modify-write race in storeEmail).
+      const indexedAt = 1737000000000;
+      const lostAt = 1737000000500;
+      for (const [at, subject] of [
+        [indexedAt, "Indexed"],
+        [lostAt, "Lost"],
+      ] as const) {
+        await mockEnv.EMAIL_STORAGE.put(
+          `feed:${feedId}:${at}`,
+          JSON.stringify({
+            subject,
+            from: "news@example.com",
+            content: `<p>${subject}</p>`,
+            receivedAt: at,
+            headers: {},
+          }),
+        );
+      }
+      await mockEnv.EMAIL_STORAGE.put(
+        `feed:${feedId}:metadata`,
+        JSON.stringify({
+          emails: [
+            {
+              key: `feed:${feedId}:${indexedAt}`,
+              subject: "Indexed",
+              receivedAt: indexedAt,
+            },
+          ],
+        }),
+      );
+
+      const listRes = await request(`/api/v1/feeds/${feedId}/emails`, {
+        headers: authHeaders,
+      });
+      const list = (await listRes.json()) as {
+        emails: { entryId: number; subject: string }[];
+      };
+      expect(list.emails.map((e) => e.subject).sort()).toEqual([
+        "Indexed",
+        "Lost",
+      ]);
+
+      const getRes = await request(`/api/v1/feeds/${feedId}/emails/${lostAt}`, {
+        headers: authHeaders,
+      });
+      expect(getRes.status).toBe(200);
+      expect((await getRes.json()) as { content: string }).toMatchObject({
+        content: "<p>Lost</p>",
+      });
+    });
+
     it("returns 404 listing emails for a missing feed", async () => {
       const res = await request("/api/v1/feeds/missing/emails", {
         headers: authHeaders,

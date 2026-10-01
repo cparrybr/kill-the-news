@@ -21,6 +21,11 @@ verbatim as the GitHub Release notes — so what you write here is what ships.
 
 ### Fixed
 
+- The REST API's email list (`GET /api/v1/feeds/{id}/emails`) and single-email
+  read now include emails whose body is stored but whose entry was dropped from
+  the feed's metadata index, which two emails arriving for one feed at the same
+  moment can do (KV has no compare-and-swap). API readers no longer miss them.
+
 - Per-feed favicons now resolve for senders on a subdomain that hosts no icon of
   its own (e.g. `mail.example.com`): the lookup walks up to the apex domain
   (`example.com`) and uses its favicon, caching it under the original sender

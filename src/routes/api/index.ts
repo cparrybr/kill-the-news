@@ -293,19 +293,31 @@ apiApp.openapi(
   async (c) => {
     const env = c.env;
     const { feedId } = c.req.valid("param");
-    const metadata = await FeedRepository.from(env).getMetadata(
-      FeedId.unchecked(feedId),
-    );
+    const repo = FeedRepository.from(env);
+    const id = FeedId.unchecked(feedId);
+    const metadata = await repo.getMetadata(id);
     if (!metadata) return c.json({ error: "Feed not found" }, 404);
+    const orphans = await repo.listUnindexedEmails(
+      id,
+      new Set(metadata.emails.map((e) => e.key)),
+    );
     return c.json(
       {
-        emails: metadata.emails.map((e) => ({
-          entryId: e.receivedAt,
-          subject: e.subject,
-          receivedAt: e.receivedAt,
-          size: e.size,
-          attachmentIds: e.attachmentIds,
-        })),
+        emails: [
+          ...metadata.emails.map((e) => ({
+            entryId: e.receivedAt,
+            subject: e.subject,
+            receivedAt: e.receivedAt,
+            size: e.size,
+            attachmentIds: e.attachmentIds,
+          })),
+          ...orphans.map((e) => ({
+            entryId: e.receivedAt,
+            subject: e.subject,
+            receivedAt: e.receivedAt,
+            size: e.size,
+          })),
+        ],
       },
       200,
     );
@@ -331,10 +343,19 @@ apiApp.openapi(
     const { feedId, entryId } = c.req.valid("param");
     const receivedAt = parseInt(entryId, 10);
     const repo = FeedRepository.from(env);
-    const metadata = await repo.getMetadata(FeedId.unchecked(feedId));
-    const metaEntry = metadata?.emails.find((e) => e.receivedAt === receivedAt);
-    if (!metaEntry) return c.json({ error: "Email not found" }, 404);
-    const data = await repo.getEmail(metaEntry.key);
+    const id = FeedId.unchecked(feedId);
+    const metadata = await repo.getMetadata(id);
+    if (!metadata) return c.json({ error: "Email not found" }, 404);
+    const key =
+      metadata.emails.find((e) => e.receivedAt === receivedAt)?.key ??
+      (
+        await repo.listUnindexedEmails(
+          id,
+          new Set(metadata.emails.map((e) => e.key)),
+        )
+      ).find((e) => e.receivedAt === receivedAt)?.key;
+    if (!key) return c.json({ error: "Email not found" }, 404);
+    const data = await repo.getEmail(key);
     if (!data) return c.json({ error: "Email not found" }, 404);
     return c.json(
       {

@@ -185,6 +185,39 @@ export class FeedRepository {
     await this.kv.delete(key);
   }
 
+  /**
+   * Emails stored under the feed's prefix but missing from its metadata index.
+   * Each body is its own key, but the index is a read-modify-write of one
+   * value (see storeEmail), so two emails landing at once can drop an entry
+   * from it while the body survives. Listing the keys recovers those for API
+   * readers. Bodies are fetched only for keys the index lacks — normally none.
+   */
+  async listUnindexedEmails(
+    feedId: FeedId,
+    indexedKeys: Set<string>,
+  ): Promise<
+    { key: string; subject: string; receivedAt: number; size: number }[]
+  > {
+    const found = [];
+    let cursor = "";
+    do {
+      const page = await this.listFeedKeys(feedId, { cursor, limit: 1000 });
+      for (const key of page.names) {
+        if (!this.isEmailKey(feedId, key) || indexedKeys.has(key)) continue;
+        const data = await this.getEmail(key);
+        if (!data) continue;
+        found.push({
+          key,
+          subject: data.subject,
+          receivedAt: data.receivedAt,
+          size: JSON.stringify(data).length,
+        });
+      }
+      cursor = page.listComplete ? "" : page.cursor;
+    } while (cursor);
+    return found;
+  }
+
   // ── Global feed list ──────────────────────────────────────────────────────
 
   async listFeeds(): Promise<FeedListItem[]> {
